@@ -1,11 +1,12 @@
 const request = require('./request');
 
+
 const testUser = {
   email: 'me@me.com',
   password: 'abc'
 };
 
-function signupUser(user = testUser) {
+function signupUser(user = testUser) {  
   return request
     .post('/api/auth/signup')
     .send(user)
