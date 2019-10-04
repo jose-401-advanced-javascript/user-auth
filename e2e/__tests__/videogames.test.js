@@ -1,6 +1,7 @@
 const request = require('../request');
 const db = require('../db');
 const { signupUser } = require('../data-helpers');
+const { matchMongoId } = require('../match-helpers');
 
 describe('Video Games API', () => {
   beforeEach(() => db.dropCollection('users'));
@@ -20,6 +21,15 @@ describe('Video Games API', () => {
     },
     genre: ['action', 'rpg']
   };
+
+  function postVideogame(videogame) {
+    return request
+      .post('/api/videogames')
+      .set('Authorization', user.token)
+      .send(videogame)
+      .expect(200)
+      .then(({ body }) => body);
+  }
 
   it('post a videogame for this user', () => {
     return request
@@ -53,5 +63,38 @@ describe('Video Games API', () => {
         `
         );
       });
+  });
+
+  it('updates a videogame', () => {
+    return postVideogame(videogame).then(savedGame => {
+      return request
+        .put(`/api/videogames/${savedGame._id}`)
+        .set('Authorization', user.token)
+        .send({ yearPublished: 2002 })
+        .expect(200)
+        .then(({ body }) => {
+          expect(body.yearPublished).toBe(2002),
+          expect(body).toMatchInlineSnapshot(
+            matchMongoId,
+            `
+              Object {
+                "__v": 0,
+                "_id": StringMatching /\\^\\[a-f\\\\d\\]\\{24\\}\\$/i,
+                "console": Object {
+                  "exclusive": false,
+                  "firstConsoleRelease": "X-box",
+                },
+                "genre": Array [
+                  "action",
+                  "rpg",
+                ],
+                "name": "Fable",
+                "owner": "5d97cb4410459f9f135060d4",
+                "yearPublished": 2002,
+              }
+            `
+          );
+        });
+    });
   });
 });
