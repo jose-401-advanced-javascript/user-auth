@@ -1,7 +1,7 @@
 const request = require('../request');
 const db = require('../db');
 const { signupUser } = require('../data-helpers');
-const { matchMongoId } = require('../match-helpers');
+const { matchIdAndOwner } = require('../match-helpers');
 
 describe('Video Games API', () => {
   beforeEach(() => db.dropCollection('users'));
@@ -75,7 +75,8 @@ describe('Video Games API', () => {
         .then(({ body }) => {
           expect(body.yearPublished).toBe(2002),
           expect(body).toMatchInlineSnapshot(
-            matchMongoId,
+            matchIdAndOwner,
+
             `
               Object {
                 "__v": 0,
@@ -89,11 +90,23 @@ describe('Video Games API', () => {
                   "rpg",
                 ],
                 "name": "Fable",
-                "owner": "5d97cb4410459f9f135060d4",
+                "owner": StringMatching /\\^\\[a-f\\\\d\\]\\{24\\}\\$/i,
                 "yearPublished": 2002,
               }
             `
           );
+        });
+    });
+  });
+
+  it('deletes a videogame', () => {
+    return postVideogame(videogame).then(savedGame => {
+      return request
+        .delete(`/api/videogames/${savedGame._id}`)
+        .set('Authorization', user.token)
+        .expect(200)
+        .then(({ body }) => {
+          expect(body._id).toMatch(savedGame._id);
         });
     });
   });
