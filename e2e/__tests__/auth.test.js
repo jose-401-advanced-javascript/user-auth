@@ -2,6 +2,7 @@ const request = require('../request');
 const { dropCollection } = require('../db');
 const jwt = require('jsonwebtoken');
 const { signupUser } = require('../data-helpers');
+const User = require('../../lib/models/user');
 
 describe('Auth API', () => {
 
@@ -96,4 +97,53 @@ describe('Auth API', () => {
       .expect(401);
   });
 
+});
+
+describe('Admin routes', () => {
+
+  beforeEach(() => dropCollection('users'));
+  
+  const adminUser = {
+    email: 'me@me.com',
+    password: 'abc'
+  };
+
+  const testUser = {
+    email: 'test@test.com',
+    password: 'abc'
+  };
+
+  function adminSignin(admin = adminUser) {
+    return request  
+      .post('/api/auth/signin')
+      .send(admin)
+      .expect(200)
+      .then(({ body }) => body);
+  }
+
+  it('allows admin to update user roles', () => {
+    return signupUser(adminUser)
+      .then(user => {
+        return User.updateById(user._id, {
+          $addToSet: {
+            roles: 'admin'
+          }
+        });
+      })
+      .then(() => {
+        return Promise.all([
+          adminSignin(),
+          signupUser(testUser)
+        ])
+          .then(([admin, user]) => {
+            return request
+              .put(`/api/auth/users/${user._id}/roles/admin`)
+              .set('Authorization', admin.token)
+              .expect(200)
+              .then(({ body }) => {
+                expect(body.roles[0]).toBe('admin');
+              });
+          });
+      });
+  });
 });
